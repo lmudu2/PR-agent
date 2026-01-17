@@ -6,60 +6,53 @@ Fully automated PR governance system with Risk Analysis, Auto-Close, and Auto-Me
 ## High-Level Architecture
 
 ```mermaid
-graph TB
-    subgraph "Developer Actions"
-        DEV[Developer]
-        DEV -->|1. Push Code| GIT[GitHub Repository]
+graph LR
+    %% Defines styles for different types of components
+    classDef actor fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef external fill:#e1ecf4,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5;
+    classDef aws fill:#ff9900,stroke:#333,stroke-width:2px,color:white;
+    classDef brain fill:#9a6dd7,stroke:#333,stroke-width:2px,color:white;
+    classDef writer fill:#4caf50,stroke:#333,stroke-width:2px,color:white;
+    classDef email fill:#ff5722,stroke:#333,stroke-width:2px,color:white;
+
+    %% Actors and External Systems
+    Dev(👨💻 Developer):::actor
+    GH(🐙 GitHub<br/>Source Control & CI):::external
+    AI(🤖 Gemini 2.5 Flash<br/>AI Analysis API):::external
+    Jira(📋 Jira<br/>Audit & Ticketing):::external
+
+    %% Main Cloud Infrastructure Block
+    subgraph "☁️ AWS Cloud Infrastructure - Serverless"
+        GW(⚡ Gateway Lambda<br/>1. Ingest & Auto-PR):::aws
+        Brain(🧠 Brain Lambda<br/>2. Logic & Governance):::brain
+        Writer(✍️ Writer Lambda<br/>3. GitHub & Email):::writer
+        SES(✉️ AWS SES<br/>Notifications):::email
     end
+
+    %% Major Data Flows
+    %% Stage 1: Ingestion
+    Dev -- "1. Push / Comment" --> GH
+    GH -- "2. Webhook Event" --> GW
     
-    subgraph "GitHub"
-        GIT -->|2. Webhook Event<br/>Push/PR/Comment| WH[GitHub Webhook]
-    end
+    %% Stage 2: Logic & AI
+    GW -- "3. Trigger Analysis" --> Brain
+    Brain -- "4. Analyze Risk" --> AI
+    AI -- "5. Return Score" --> Brain
+
+    %% Stage 3: Execution (The "Hands")
+    Brain -- "6. Request Action" --> Writer
+    Writer -- "7. API Action" --> GH
+    Writer -- "7a. Send Email" --> SES
     
-    subgraph "AWS Lambda - Gateway"
-        WH -->|3. HTTP POST| GATE[GitHub-PR-Risk-Reviewer<br/>Gateway Lambda]
-        GATE -->|4a. Push Event| AUTOPR[Auto-PR Logic]
-        GATE -->|4b. PR Event| RISK[Risk Analysis Trigger]
-        GATE -->|4c. Comment Event| CMD[Command Router]
-    end
-    
-    subgraph "AWS Lambda - Brain"
-        AUTOPR -->|5. Create PR via API| GIT
-        RISK -->|6. Analyze Risk| BRAIN[PR-Agent-Brain<br/>Brain Lambda]
-        CMD -->|6. Approval/Rejection| BRAIN
-        BRAIN -->|7. AI Analysis| GEMINI[Google Gemini API]
-        GEMINI -->|8. Risk Score| BRAIN
-    end
-    
-    subgraph "Decision Engine"
-        BRAIN -->|9a. High Risk| CLOSE[Auto-Close PR]
-        BRAIN -->|9b. Low Risk| MERGE[Auto-Merge PR]
-        BRAIN -->|9c. Pending| APPROVE[Wait for Approval]
-    end
-    
-    subgraph "Governance & Audit"
-        CLOSE -->|10. Update Ticket| JIRA[Jira API]
-        APPROVE -->|10. Create Ticket| JIRA
-        MERGE -->|10. Update Ticket| JIRA
-        BRAIN -->|11. Send Email| SES[AWS SES]
-    end
-    
-    subgraph "GitHub Actions"
-        CLOSE -->|12. Close PR| GIT
-        MERGE -->|12. Merge PR| GIT
-        APPROVE -->|13. Set Status Check| GIT
-        BRAIN -->|14. Post Comments| WRITER[PR-Agent-GitHub-Writer<br/>Writer Lambda]
-        WRITER -->|15. GitHub API| GIT
-    end
-    
-    style DEV fill:#e1f5ff
-    style GATE fill:#fff4e6
-    style BRAIN fill:#fff4e6
-    style WRITER fill:#fff4e6
-    style GEMINI fill:#f3e5f5
-    style JIRA fill:#e8f5e9
-    style SES fill:#e8f5e9
-    style GIT fill:#fce4ec
+    %% Audit Trail
+    Brain -- "8. Sync Status" --> Jira
+
+    %% Links for clearer layout
+    linkStyle 0 stroke-width:2px,fill:none,stroke:black
+    linkStyle 1 stroke-width:3px,fill:none,stroke:#ff9900
+    linkStyle 2 stroke-width:3px,fill:none,stroke:#ff9900
+    linkStyle 5 stroke-width:3px,fill:none,stroke:#4caf50
+    linkStyle 7 stroke-width:3px,fill:none,stroke:#ff5722
 ```
 
 ## Detailed Flow Diagrams
