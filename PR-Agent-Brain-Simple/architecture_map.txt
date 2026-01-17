@@ -1,0 +1,16 @@
+# System Architecture Map: Payment & Scanner Ecosystem
+
+## Services:
+1. **User-Profile-Service**: Manages user metadata and unique identifiers. 
+   - Database: PostgreSQL (Table: `users`)
+   - Primary Key: `user_id` (Currently defined as INTEGER)
+
+2. **Legacy-Scanner-Adapter**: A 10-year-old service that scans physical QR codes. 
+   - Dependency: Directly queries the `users` table in the User-Profile-Service.
+   - Constraint: This service is "Hard-Coded" to only accept Numeric User IDs.
+
+3. **Notification-Engine**: Sends SMS/Email alerts to users.
+   - Connection: Listens to the User-Profile-Service via an SNS Topic.
+
+## Known Risks:
+- The Legacy-Scanner-Adapter is brittle. Any change to the `users` table schema usually breaks the scanner sync.

@@ -1,0 +1,10 @@
+# Engineering Standard Operating Procedures (SOP)
+
+1. **Schema Change Policy:** Any Pull Request (PR) that modifies a Database Schema (SQL files) MUST be flagged for "Impact Analysis."
+2. **Legacy Compatibility:** No changes are allowed to the `user_id` format until the Legacy-Scanner-Adapter is decommissioned (Estimated Q4 2026).
+3. **Approval Flow:**
+   - Low Risk: Can be approved by any Peer.
+   - Medium Risk: Requires Lead Architect approval.
+   - High Risk: Requires SRE (Site Reliability Engineering) sign-off and a mandatory 48-hour "Freeze" notice.
+4. **Jira Tracking:** Every high-risk change must have a corresponding Jira ticket with the "Risk_Score" field populated by an automated tool.
+5. **Configuration Management:** Changes to production configuration files (e.g., timeouts, memory limits, retries) are classified as **Sensitive**. These changes require **Medium Risk** classification to ensure Lead Architect visibility via the Approval Flow (SOP 3).

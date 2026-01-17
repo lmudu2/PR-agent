@@ -1,0 +1,15 @@
+# Incident History & Post-Mortems
+
+## Incident ID: #OUTAGE-2024-06
+- **Date:** June 14, 2024
+- **Severity:** P0 (Critical)
+- **What Happened:** A developer changed the `user_id` field in the database from an Integer to a String (UUID) to support a new global expansion.
+- **Root Cause:** The Legacy-Scanner-Adapter could not parse the new String format. It crashed, preventing 50,000 users from checking in at physical locations.
+- **Downtime:** 4 hours.
+- **Recovery:** Rolled back the database schema to Integer.
+
+## Incident ID: #OUTAGE-2025-02
+- **Date:** Feb 02, 2025
+- **Severity:** P2 (High)
+- **What Happened:** The Notification-Engine was disconnected during a maintenance window without notifying the SRE team.
+- **Root Cause:** Lack of communication during the PR review phase.
