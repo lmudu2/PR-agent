@@ -1,8 +1,8 @@
-# Zero Touch PR Governance: The Risk Analysis Agent
+# PR Governance: The Risk Analysis Agent
 **Technical Specification & Implementation Guide**
 
 ## 1. Introduction
-In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue." Developers bypass checks to ship faster, or reviewers rubber-stamp changes without context. The **Zero Touch PR Governance Agent** addresses this by fully automating the lifecycle of code changes—from the moment a developer pushes code to the final merge—ensuring that governance is active, invisible, and strictly enforced without slowing down innovation.
+In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue". Developers may bypass checks to ship faster, while reviewers might rubber-stamp changes without proper context. The Change Risk Analysis Agent addresses this by fully automating the lifecycle of code changes—from the initial code push to the final merge—ensuring that governance is active, invisible, and strictly enforced
 
 ## 2. Objective
 To achieve a "Zero Touch" developer experience while maintaining strict security posture:
