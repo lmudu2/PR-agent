@@ -2,25 +2,30 @@
 **Technical Specification & Implementation Guide**
 
 ## 1. Introduction
+<<<<<<< HEAD
 In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue". Developers may bypass checks to ship faster, while reviewers might rubber-stamp changes without proper context. The Change Risk Analysis Agent addresses this by fully automating the lifecycle of code changes—from the initial code push to the final merge—ensuring that governance is active, invisible, and strictly enforced
+=======
+In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue". Developers may bypass checks to ship faster, while reviewers might rubber-stamp changes without proper context. The Change Risk Analysis Agent addresses this by fully automating the lifecycle of code changes—from the initial code push to the final merge—ensuring that governance is active, invisible, and strictly enforced.
+>>>>>>> 382bc5f (Final V2 Release: Llama 3 Migration, Loop Fixes, Jira Integration)
 
 ## 2. Objective
 To achieve a "Zero Touch" developer experience while maintaining strict security posture:
 - **Eliminate Manual Toil**: Automatically recognize code pushes and generate formatted Pull Requests immediately.
 - **Contextual Risk Analysis**: Instantly evaluate changes against `deployment_policies.txt` and `incident_history.txt` to predict downstream impact.
 - **Enforce Gatekeeper Logic**: Proactively "Auto-Close" high-risk PRs to physically prevent merging until specific approval is granted.
+- **Loop Prevention**: Smart detection of agent-initiated actions (Merge/Re-open) to prevent infinite analysis loops.
 - **Accelerate Happy Paths**: Automatically merge low-risk changes without human intervention.
 
 ## 3. Solution Architecture
-The system employs a Serverless Event-Driven Architecture leveraging AWS Lambda for orchestration and Google Gemini 2.0 for reasoning.
+The system employs a Serverless Event-Driven Architecture leveraging AWS Lambda for orchestration and **Meta Llama 3 70B** for reasoning.
 
 | Layer | Component | Function |
 | :--- | :--- | :--- |
 | **Interface Layer** | GitHub Webhooks | Captures `push` (code updates), `pull_request` (creation/sync), and `issue_comment` (approvals) events. |
 | **Orchestration Layer** | AWS Lambda (Gateway) | Routes events: triggers Auto-PR for pushes, inputs for formatting, or Risk Analysis for PRs. |
 | **Knowledge Layer** | Local Context Files | Stores policies and incident history directly within the inference execution environment context. |
-| **Reasoning Layer** | Google Gemini 2.0 Flash | Performs fast, multi-step reasoning to diff code, semantic analysis, and risk scoring. |
-| **Execution Layer** | AWS Lambda (Writer) | Performs side-effects: Creating PRs via API, posting comments, closing/reopening/merging PRs. |
+| **Monitor Layer** | **Meta Llama 3 70B** | Performs ultra-fast (<1s) multi-step reasoning to diff code, semantic analysis, and risk scoring. |
+| **Execution Layer** | AWS Lambda (Writer) | Performs side-effects: Creating PRs via API, posting comments, closing/reopening/merging PRs, and **updating Jira**. |
 
 ## 4. Personas & ROI Benefits
 - **Developer**: "Zero Touch" experience. pushes code and walks away. If it's safe, it's merged automatically. If not, they get immediate feedback.
@@ -36,6 +41,7 @@ The agent follows a **Monitor-Analyze-Act** cycle:
     -   **Action**: If none exists, it hits the GitHub API to **Create Pull Request** immediately.
 2.  **Retrieval & Reasoning ("Risk Analysis")**:
     -   The `pull_request` creation event triggers the Brain.
+    -   **Loop Guard**: Gateway ignores events if the sender is a bot OR if the last comment indicates "Risk Accepted".
     -   **Context Injection**: The agent reads `incident_history.txt` (e.g., "Login refactor caused 404 in June").
     -   **Heuristic Check**: Compares code diff against `deployment_policies.txt` (e.g., "No DB schema changes on Fridays").
 3.  **Decision & Execution**:
@@ -47,11 +53,11 @@ The agent follows a **Monitor-Analyze-Act** cycle:
         -   **Output**: "✅ Approved: Low risk change detected. Merging..."
 
 ## 6. Technical Implementation
--   **Foundational Model**: Google Gemini 2.0 Flash (Optimized for speed/cost).
+-   **Foundational Model**: **Meta Llama 3 70B**.
 -   **Orchestrator**: AWS Lambda (Python 3.12+).
 -   **Data Source**: Flat-file Context (`.txt` files zipped with Lambda).
 -   **GitHub Integration**: `urllib` (Standard Library) authentication via GitHub PAT.
--   **Gov Integration**: Jira API for ticket creation/updates.
+-   **Gov Integration**: Jira API (Comments on existing tickets supported).
 
 ## 7. Use Case Scenarios
 
@@ -67,5 +73,5 @@ The Zero Touch PR Governance Agent transforms the PR process from a passive wait
 
 ## 9. Appendix: Production Stack
 -   **Webhooks**: Direct GitHub payloads to AWS Lambda Function URLs / API Gateway.
--   **Auth**: Environment Variables (`GITHUB_TOKEN`, `GOOGLE_API_KEY`).
+-   **Auth**: Environment Variables (`GITHUB_TOKEN`, `GROQ_API_KEY`).
 -   **Logging**: AWS CloudWatch for full trace audit.

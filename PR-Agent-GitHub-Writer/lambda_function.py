@@ -205,43 +205,71 @@ def lambda_handler(event, context):
                 repo = 'lmudu2/risk-analyzer-poc'
                 print(f"DEBUG Jira: Extracted repo from comment: {repo}")
             
-            # Create rich description with all details
-            from datetime import datetime
-            import re
-            timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+            # Check if this is an UPDATE (Comment) or CREATE
+            existing_ticket = params.get('ticket_id')
+            comment_text = params.get('comment_text')
             
-            description_text = f"""Risk Analysis Report
-
-📋 Repository: {repo or 'Not specified'}
-🔢 PR Number: #{pr_num}
-⚠️ Risk Level: {risk_level}
-🔧 Affected Service: {service_name}
-
-📝 Request Details:
-{approval_comment}
-
-🔍 Action Type: {action_type}
-⏰ Created: {timestamp}
-"""
-            
-            jira_url = "https://lmudu95.atlassian.net/rest/api/3/issue"
-            payload = {
-                "fields": {
-                    "project": {"key": "SCRUM"},
-                    "summary": f"[{risk_level}] Audit: {service_name} - PR #{pr_num}",
-                    "description": {
-                        "type": "doc", "version": 1, 
-                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": description_text}]}]
-                    },
-                    "issuetype": {"name": "Task"}
+            if existing_ticket and existing_ticket != "UNKNOWN" and comment_text:
+                # ADD COMMENT TO EXISTING TICKET
+                print(f"DEBUG Jira: Adding comment to {existing_ticket}")
+                comment_url = f"https://lmudu95.atlassian.net/rest/api/3/issue/{existing_ticket}/comment"
+                payload = {
+                    "body": {
+                        "type": "doc", "version": 1,
+                        "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment_text}]}]
+                    }
                 }
-            }
-            req = urllib.request.Request(jira_url, data=json.dumps(payload).encode(), method='POST')
-            req.add_header('Authorization', f'Basic {auth}')
-            req.add_header('Content-Type', 'application/json')
-            with urllib.request.urlopen(req) as res:
-                key = json.loads(res.read())['key']
-                response_text = f"SUCCESS: Jira {key} created."
+                req = urllib.request.Request(comment_url, data=json.dumps(payload).encode(), method='POST')
+                req.add_header('Authorization', f'Basic {auth}')
+                req.add_header('Content-Type', 'application/json')
+                
+                try:
+                    with urllib.request.urlopen(req) as res:
+                        # Jira returns 201 Created for comments too
+                        response_text = f"SUCCESS: Comment added to {existing_ticket}."
+                except Exception as e:
+                    print(f"Jira Comment Error: {e}")
+                    response_text = f"ERROR: Failed to comment on {existing_ticket}: {e}"
+
+            else:
+                # CREATE NEW TICKET (Original Logic)
+                # Create rich description with all details
+                from datetime import datetime
+                import re
+                timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+                
+                description_text = f"""Risk Analysis Report
+    
+    📋 Repository: {repo or 'Not specified'}
+    🔢 PR Number: #{pr_num}
+    ⚠️ Risk Level: {risk_level}
+    🔧 Affected Service: {service_name}
+    
+    📝 Request Details:
+    {approval_comment}
+    
+    🔍 Action Type: {action_type}
+    ⏰ Created: {timestamp}
+    """
+                
+                jira_url = "https://lmudu95.atlassian.net/rest/api/3/issue"
+                payload = {
+                    "fields": {
+                        "project": {"key": "SCRUM"},
+                        "summary": f"[{risk_level}] Audit: {service_name} - PR #{pr_num}",
+                        "description": {
+                            "type": "doc", "version": 1, 
+                            "content": [{"type": "paragraph", "content": [{"type": "text", "text": description_text}]}]
+                        },
+                        "issuetype": {"name": "Task"}
+                    }
+                }
+                req = urllib.request.Request(jira_url, data=json.dumps(payload).encode(), method='POST')
+                req.add_header('Authorization', f'Basic {auth}')
+                req.add_header('Content-Type', 'application/json')
+                with urllib.request.urlopen(req) as res:
+                    key = json.loads(res.read())['key']
+                    response_text = f"SUCCESS: Jira {key} created."
 
         # --- TOOL: APPROVAL EMAIL ---
         elif func_name == 'send_approval_email':

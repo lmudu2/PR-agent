@@ -1,4 +1,4 @@
-# PR Agent - Zero Touch Architecture
+# PR Agent - Architecture
 
 ## System Overview
 Fully automated PR governance system with Risk Analysis, Auto-Close, and Auto-Merge capabilities.
@@ -18,7 +18,7 @@ graph LR
     %% Actors and External Systems
     Dev(👨💻 Developer):::actor
     GH(🐙 GitHub<br/>Source Control & CI):::external
-    AI(🤖 Gemini 2.5 Flash<br/>AI Analysis API):::external
+    AI(🤖 Llama 3):::external
     Jira(📋 Jira<br/>Audit & Ticketing):::external
 
     %% Main Cloud Infrastructure Block
@@ -46,6 +46,9 @@ graph LR
     
     %% Audit Trail
     Brain -- "8. Sync Status" --> Jira
+    
+    %% Loop Prevention
+    GW -. "Loop Guard" .-> GH
 
     %% Links for clearer layout
     linkStyle 0 stroke-width:2px,fill:none,stroke:black

@@ -112,8 +112,34 @@ def lambda_handler(event, context):
             return {'statusCode': 200, 'body': 'Push Processed'}
 
         # Gatekeeper Logic: Automatic Trigger on PR Open/Sync
-        if 'pull_request' in body and body.get('action') in ['opened', 'synchronize', 'reopened']:
-            print(f"DEBUG: Automatic Trigger detected (Action: {body.get('action')})")
+        if 'pull_request' in body and body.get('action') in ['opened', 'synchronize']:
+            pr_sender = body.get('sender', {}).get('login', '').lower()
+            if 'bot' in pr_sender or 'pr-agent' in pr_sender:
+                print(f"DEBUG: Ignoring event from bot '{pr_sender}' to prevent loops.")
+                return {'statusCode': 200}
+            
+            print(f"DEBUG: Automatic Trigger detected (Action: {body.get('action')}) from {pr_sender}")
+            
+            # LOOP PREVENTION: Check last comment for our own "Risk Accepted" message
+            # This handles case where Lambda uses USER token (so sender != bot)
+            if body.get('action') in ['closed', 'synchronize', 'reopened']:
+                repo_full = body.get('repository', {}).get('full_name')
+                pr_num = body.get('pull_request', {}).get('number')
+                
+                try:
+                    comments_url = f"https://api.github.com/repos/{repo_full}/issues/{pr_num}/comments?sort=created&direction=desc&per_page=1"
+                    github_token = os.environ.get('GITHUB_TOKEN')
+                    req = urllib.request.Request(comments_url, headers={"Authorization": f"token {github_token}"})
+                    with urllib.request.urlopen(req) as res:
+                        comments = json.loads(res.read().decode())
+                        if comments:
+                            last_body = comments[0].get('body', '')
+                            # If last comment confirms WE just acted, DO NOT trigger again
+                            if "Risk Accepted" in last_body or "Merged Automatically" in last_body or "Unblocked" in last_body:
+                                print("DEBUG: Ignoring event - Detected recent Agent action ( Loop Prevention).")
+                                return {'statusCode': 200}
+                except Exception as e:
+                    print(f"WARN: Failed to check comments for loop prevention: {e}")
             
             pr_data = body.get('pull_request', {})
             pr_number = pr_data.get('number')
@@ -324,7 +350,7 @@ def trigger_writer_direct_branch(repo, num, branch):
 
 def trigger_brain(payload):
     client = boto3.client('lambda')
-    client.invoke(FunctionName='PR-Agent-Brain-LangGraph', InvocationType='Event', Payload=json.dumps(payload))
+    client.invoke(FunctionName='PR-Agent-Brain', InvocationType='Event', Payload=json.dumps(payload))
 
 def post_thinking_status(repo, num, msg):
     client = boto3.client('lambda')

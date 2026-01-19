@@ -12,7 +12,7 @@ from datetime import datetime
 
 # Constants
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
 # Load Knowledge Base
 KB_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -98,7 +98,7 @@ def lambda_handler(event, context):
     # Use Gemini for Risk Analysis
     try:
         prompt = build_system_prompt(repo_full_name, pr_number, user_msg, pr_diff)
-        analysis = call_gemini_api(prompt)
+        analysis = call_groq_api(prompt)
         
         print(f"DEBUG: Gemini Analysis -> {analysis}")
         
@@ -124,30 +124,39 @@ def lambda_handler(event, context):
         return handle_fallback(user_msg, repo_full_name, pr_number, str(e), commit_sha)
 
 
-def call_gemini_api(prompt: str) -> str:
-    """Call Gemini API directly via REST."""
-    # SWITCH: Using gemini-2.5-flash (Validated & Working)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GOOGLE_API_KEY}"
+def call_groq_api(prompt: str) -> str:
+    """Call Groq API directly via REST (Llama 3 70B)."""
+    # SWITCH: Using Llama 3 70B via Groq
+    url = "https://api.groq.com/openai/v1/chat/completions"
     
     payload = {
-        "contents": [{
-            "parts": [{"text": prompt}]
-        }],
-        "generationConfig": {
-            "temperature": 0.0,
-            "maxOutputTokens": 2048
-        }
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": "You are a helpful AI assistant for Code Reviews."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "max_tokens": 2048
     }
     
     req = urllib.request.Request(
         url,
         data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json'}
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {GROQ_API_KEY}',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
     )
     
-    with urllib.request.urlopen(req, timeout=30) as response:
-        result = json.loads(response.read().decode('utf-8'))
-        return result['candidates'][0]['content']['parts'][0]['text']
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            return result['choices'][0]['message']['content']
+    except Exception as e:
+        print(f"GROQ API ERROR: {str(e)}")
+        # Fallback to a simple error message if API fails
+        return f"Error calling AI Model: {str(e)}"
 
 
 def build_system_prompt(repo: str, pr_num: str, user_msg: str, diff: str) -> str:
@@ -326,11 +335,11 @@ def trigger_high_risk_approval_smart(user_msg: str, repo: str, pr_num: str, anal
     
     # Post Risk Report
     # We embed the PARAMS using Markdown Link Reference syntax (invisible in rendered view, visible in raw)
-    risk_report = f"""**🤖 AI Risk Analysis (Powered by Gemini 2.5 Flash)**
-
-{analysis}
+    risk_report = f"""**🤖 AI Risk Analysis (Powered by Llama 3 70B)**
 
 **Jira Ticket:** {ticket_id}
+
+{analysis}
 
 ⏸️ **Paused:** Waiting for approval via email.
  
@@ -557,9 +566,10 @@ def handle_approval(user_msg: str, repo: str, pr_num: str, sender_name: str = "u
                 if jira_ticket and jira_ticket != "UNKNOWN":
                     writer = boto3.client('lambda')
                     try:
-                        writer.invoke(
+                        print(f"DEBUG: Invoking manage_jira_governance for Ticket {jira_ticket}")
+                        resp = writer.invoke(
                             FunctionName='PR-Agent-GitHub-Writer',
-                            InvocationType='Event',
+                            InvocationType='RequestResponse', # Changed to Sync to see error
                             Payload=json.dumps({
                                 "actionGroup": "ManualReply", 
                                 "function": "manage_jira_governance",
@@ -571,9 +581,14 @@ def handle_approval(user_msg: str, repo: str, pr_num: str, sender_name: str = "u
                                 }
                             })
                         )
-                        print(f"DEBUG: Updated Jira ticket {jira_ticket}")
+                        payload = json.loads(resp['Payload'].read().decode('utf-8'))
+                        print(f"DEBUG: Jira Update Response: {payload}")
                     except Exception as e:
-                        print(f"WARN: Failed to update Jira: {e}")
+                        print(f"ERROR: Failed to update Jira: {e}")
+
+                # CRITICAL ORDER FIX: Post "Risk Accepted" comment BEFORE Re-opening
+                # This ensures Gateway finds this comment when it processes the 'reopened' event
+                post_github_comment(repo, pr_num, f"✅ **Risk Accepted**\n\nPR has been unblocked by {sender_name} (Re-opened).\n\n**Jira Updated:** {jira_ticket}")
 
                 # Auto-Close: Re-open PR
                 print(f"DEBUG: Re-opening PR #{pr_num} after approval")
@@ -582,8 +597,9 @@ def handle_approval(user_msg: str, repo: str, pr_num: str, sender_name: str = "u
                 # Auto-Merge (Happy Path)
                 merged = merge_pull_request(repo, pr_num)
                 merge_msg = "Merged Automatically 🚀" if merged else "Ready to Merge (Manual Merge Required)"
-
-                post_github_comment(repo, pr_num, f"✅ **Risk Accepted**\n\nPR has been unblocked by {sender_name} (Re-opened).\n\n**Status:** {merge_msg}\n**Jira Updated:** {jira_ticket}")
+                
+                # Post final status
+                post_github_comment(repo, pr_num, f"**Status:** {merge_msg}")
                 return {"statusCode": 200, "body": "Risk Analysis Unblocked"}
 
 
@@ -633,7 +649,7 @@ Current Content:
 Apply the requested changes and output ONLY the full new content of the file. No markdown blocks, no explanations."""
                     
                     print("DEBUG: Calling Gemini for code transformation...")
-                    new_content = call_gemini_api(transform_prompt).strip()
+                    new_content = call_groq_api(transform_prompt).strip()
                     # Clean up markdown if Gemini added it
                     new_content = re.sub(r'^```\w*\n', '', new_content)
                     new_content = re.sub(r'\n```$', '', new_content)
@@ -681,20 +697,26 @@ Apply the requested changes and output ONLY the full new content of the file. No
 
             # Step 8: Update Jira
             if jira_ticket and jira_ticket != 'UNKNOWN':
-                writer.invoke(
-                    FunctionName='PR-Agent-GitHub-Writer',
-                    InvocationType='Event',
-                    Payload=json.dumps({
-                        "actionGroup": "ManualReply", 
-                        "function": "manage_jira_governance",
-                        "repo_full_name": repo,
-                        "parameters": {
-                            "ticket_id": jira_ticket, 
-                            "comment_text": f"✅ **Approved by {sender_name}:** {execution_log}", 
-                            "pr_number": pr_num
-                        }
-                    })
-                )
+                try:
+                    print(f"DEBUG: Invoking manage_jira_governance for Rejection {jira_ticket}")
+                    resp = writer.invoke(
+                        FunctionName='PR-Agent-GitHub-Writer',
+                        InvocationType='RequestResponse', # Sync for debugging
+                        Payload=json.dumps({
+                            "actionGroup": "ManualReply", 
+                            "function": "manage_jira_governance",
+                            "repo_full_name": repo,
+                            "parameters": {
+                                "ticket_id": jira_ticket, 
+                                "comment_text": f"❌ **Rejected by {sender_name}:** Request denied by user.", 
+                                "pr_number": pr_num
+                            }
+                        })
+                    )
+                    payload = json.loads(resp['Payload'].read().decode('utf-8'))
+                    print(f"DEBUG: Jira Rejection Update Response: {payload}")
+                except Exception as e:
+                     print(f"ERROR: Failed to update Jira rejection: {e}")
             
             # Step 9: Post result
             post_github_comment(repo, pr_num, f"✅ **Approved Action Executed**\n\nRequest: {request_text}\n\n**Status:** {execution_log}\n**Approved By:** {sender_name}\n**Jira Updated:** {jira_ticket}")
