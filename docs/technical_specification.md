@@ -2,11 +2,9 @@
 **Technical Specification & Implementation Guide**
 
 ## 1. Introduction
-<<<<<<< HEAD
-In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue". Developers may bypass checks to ship faster, while reviewers might rubber-stamp changes without proper context. The Change Risk Analysis Agent addresses this by fully automating the lifecycle of code changes—from the initial code push to the final merge—ensuring that governance is active, invisible, and strictly enforced
-=======
+
 In fast-paced development environments, the friction of manual Pull Request creation and the latency of human review often lead to "Governance Fatigue". Developers may bypass checks to ship faster, while reviewers might rubber-stamp changes without proper context. The Change Risk Analysis Agent addresses this by fully automating the lifecycle of code changes—from the initial code push to the final merge—ensuring that governance is active, invisible, and strictly enforced.
->>>>>>> 382bc5f (Final V2 Release: Llama 3 Migration, Loop Fixes, Jira Integration)
+
 
 ## 2. Objective
 To achieve a "Zero Touch" developer experience while maintaining strict security posture:
