@@ -110,13 +110,16 @@ def lambda_handler(event, context):
                 user_msg, repo_full_name, pr_number, analysis, risk_level, commit_sha
             )
         else:
+            # Create Jira Ticket for Low Risk Audit
+            ticket_id = create_jira_ticket(repo_full_name, pr_number, risk_level, analysis)
+            
             if is_automatic_trigger and commit_sha:
                 set_commit_status(repo_full_name, commit_sha, "success", "Low Risk - Safe to Merge")
                 # Auto-Merge (Happy Path)
                 merge_pull_request(repo_full_name, pr_number)
-                post_github_comment(repo_full_name, pr_number, f"{analysis}\n\n✅ **Auto-Merge**: Low Risk. Merging automatically.")
+                post_github_comment(repo_full_name, pr_number, f"**Jira Ticket**: {ticket_id}\n\n{analysis}\n\n✅ **Auto-Merge**: Low Risk. Merging automatically.")
             else: 
-                post_github_comment(repo_full_name, pr_number, analysis)
+                post_github_comment(repo_full_name, pr_number, f"**Jira Ticket**: {ticket_id}\n\n{analysis}")
             return {"statusCode": 200, "body": "Low Risk - Executed"}
     
     except Exception as e:
@@ -266,6 +269,89 @@ def extract_risk_level(analysis: str) -> str:
         return "LOW"
 
 
+def get_pr_details(repo, pr_num):
+    """Fetch PR details to get title and branch name."""
+    url = f"https://api.github.com/repos/{repo}/pulls/{pr_num}"
+    try:
+        req = urllib.request.Request(url, headers={"Authorization": f"token {GITHUB_TOKEN}"})
+        with urllib.request.urlopen(req) as res:
+            return json.loads(res.read().decode('utf-8'))
+    except Exception as e:
+        print(f"WARN: Failed to fetch PR details: {e}")
+        return {}
+
+def extract_jira_ticket(pr_data):
+    """Extracts Jira Ticket ID from PR title or branch name."""
+    title = pr_data.get('title', '')
+    branch = pr_data.get('head', {}).get('ref', '')
+    
+    match = re.search(r'([A-Z]{2,10}-\d+)', title)
+    if match: return match.group(1)
+    
+    match = re.search(r'([A-Z]{2,10}-\d+)', branch)
+    if match: return match.group(1)
+    
+    return None
+
+def create_jira_ticket(repo: str, pr_num: str, risk_level: str, analysis: str) -> str:
+    """Helper to create or update a Jira ticket via the Writer Lambda."""
+    writer = boto3.client('lambda')
+    
+    # 1. Try to find existing ticket
+    pr_details = get_pr_details(repo, pr_num)
+    existing_ticket = extract_jira_ticket(pr_details)
+    
+    ticket_id = existing_ticket if existing_ticket else f"SCRUM-{int(datetime.now().timestamp()) % 1000}"
+    
+    try:
+        if existing_ticket:
+            print(f"DEBUG: Found existing Jira Ticket {existing_ticket}. Updating...")
+            payload = {
+                "actionGroup": "ManualReply", 
+                "function": "manage_jira_governance",
+                "repo_full_name": repo,
+                "parameters": {
+                    "ticket_id": existing_ticket,
+                    "comment_text": f"🔄 **Risk Update (PR #{pr_num})**\n\nRisk Level: *{risk_level}*\n\n{analysis}",
+                    "pr_number": pr_num,
+                    "risk_level": risk_level
+                }
+            }
+        else:
+            print(f"DEBUG: Creating NEW Jira ticket for {risk_level} risk PR #{pr_num}")
+            payload = {
+                "actionGroup": "ManualReply", 
+                "function": "manage_jira_governance",
+                "repo_full_name": repo,
+                "parameters": {
+                    "pr_number": pr_num,
+                    "risk_level": risk_level,
+                    "service_name": repo,
+                    "approval_comment": f"AI RISK ANALYSIS:\n{analysis}"
+                }
+            }
+
+        jira_res = writer.invoke(
+            FunctionName='PR-Agent-GitHub-Writer',
+            InvocationType='RequestResponse',
+            Payload=json.dumps(payload)
+        )
+        jira_out = json.loads(jira_res['Payload'].read().decode('utf-8'))
+        jira_text = jira_out.get('response', {}).get('functionResponse', {}).get('responseBody', {}).get('TEXT', {}).get('body', '')
+        
+        # If we created a new one, extract the ID
+        if not existing_ticket:
+            match = re.search(r'(SCRUM-\d+|[A-Z]+-\d+)', jira_text)
+            if match:
+                ticket_id = match.group(1)
+                print(f"DEBUG: Created Jira Ticket: {ticket_id}")
+                
+    except Exception as e:
+        print(f"WARN: Jira ticket creation/update failed: {e}")
+        
+    return ticket_id
+
+
 def trigger_high_risk_approval_smart(user_msg: str, repo: str, pr_num: str, analysis: str, risk_level: str, commit_sha: str = None):
     """Triggers approval flow for high-risk operations with AI analysis."""
     
@@ -280,32 +366,7 @@ def trigger_high_risk_approval_smart(user_msg: str, repo: str, pr_num: str, anal
 
 
     writer = boto3.client('lambda')
-    ticket_id = f"SCRUM-{int(datetime.now().timestamp()) % 1000}"
-    
-    try:
-        jira_res = writer.invoke(
-            FunctionName='PR-Agent-GitHub-Writer',
-            InvocationType='RequestResponse',
-            Payload=json.dumps({
-                "actionGroup": "ManualReply", 
-                "function": "manage_jira_governance",
-                "repo_full_name": repo,
-                "parameters": {
-                    "pr_number": pr_num,
-                    "risk_level": risk_level,
-                    "service_name": repo,
-                    "approval_comment": f"AI RISK ANALYSIS:\n{analysis}"
-                }
-            })
-        )
-        jira_out = json.loads(jira_res['Payload'].read().decode('utf-8'))
-        jira_text = jira_out.get('response', {}).get('functionResponse', {}).get('responseBody', {}).get('TEXT', {}).get('body', '')
-        
-        match = re.search(r'(SCRUM-\d+)', jira_text)
-        if match:
-            ticket_id = match.group(1)
-    except Exception as e:
-        print(f"WARN: Jira ticket creation failed: {e}")
+    ticket_id = create_jira_ticket(repo, pr_num, risk_level, analysis)
     
     # Send Approval Email
     action_name = "ai_analyzed_action"
