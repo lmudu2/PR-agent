@@ -7,7 +7,7 @@ In fast-paced development environments, the friction of manual Pull Request crea
 
 
 ## 2. Objective
-To achieve a "Zero Touch" developer experience while maintaining strict security posture:
+To achieve an automated developer experience while maintaining strict security posture:
 - **Eliminate Manual Toil**: Automatically recognize code pushes and generate formatted Pull Requests immediately.
 - **Contextual Risk Analysis**: Instantly evaluate changes against `deployment_policies.txt` and `incident_history.txt` to predict downstream impact.
 - **Enforce Gatekeeper Logic**: Proactively "Auto-Close" high-risk PRs to physically prevent merging until specific approval is granted.
@@ -27,7 +27,7 @@ The system employs a Serverless Event-Driven Architecture leveraging AWS Lambda 
 | **Execution Layer** | AWS Lambda (Writer) | Performs side-effects: Creating PRs via API, posting comments, closing/reopening/merging PRs, and **updating Jira**. |
 
 ## 4. Personas & ROI Benefits
-- **Developer**: "Zero Touch" experience. pushes code and walks away. If it's safe, it's merged automatically. If not, they get immediate feedback.
+- **Developer**: Automated experience. pushes code and walks away. If it's safe, it's merged automatically. If not, they get immediate feedback.
 - **Security Lead**: "Zero Trust" enforcement. High-risk code is physically blocked (Closed) by default, requiring an audit trail for re-opening.
 - **IT Manager**: Full compliance visibility via Jira integration for every approval and rejection.
 
@@ -65,13 +65,13 @@ The agent follows a **Monitor-Analyze-Act** cycle:
 
 | Scenario | Input Signal | AI Logic | Result |
 | :--- | :--- | :--- | :--- |
-| **Safe Fix** | Push to `fix-css-typo` | Diff shows CSS only. Risk is 'LOW'. | **AUTO-PR** → **AUTO-MERGE** (Zero Touch) |
+| **Safe Fix** | Push to `fix-css-typo` | Diff shows CSS only. Risk is 'LOW'. | **AUTO-PR** → **AUTO-MERGE** (Automated) |
 | **Dangerous Change** | Push to `refactor-auth` | Diff shows DB drop. Matches Policy 'No-Data-Loss'. | **AUTO-PR** → **AUTO-CLOSE** (Blocked) |
 | **Policy Violation** | Push during Freeze | Checks Date vs `deployment_policies.txt`. | **AUTO-CLOSE** (Policy Block) |
 | **Approval** | Comment "Approved" | Verifies User Permissions. | **RE-OPEN** → **AUTO-MERGE** |
 
 ## 8. Conclusion
-The Zero Touch PR Governance Agent transforms the PR process from a passive waiting game into an active, intelligent workflow. By automating the bureaucratic steps (PR creation, basic review, merging) and strictly enforcing the critical ones (High Risk gating), it creates a development pipeline that is simultaneously faster and safer.
+The PR Governance Agent transforms the PR process from a passive waiting game into an active, intelligent workflow. By automating the bureaucratic steps (PR creation, basic review, merging) and strictly enforcing the critical ones (High Risk gating), it creates a development pipeline that is simultaneously faster and safer.
 
 ## 9. Appendix: Production Stack
 -   **Webhooks**: Direct GitHub payloads to AWS Lambda Function URLs / API Gateway.

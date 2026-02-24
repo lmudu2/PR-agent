@@ -60,7 +60,7 @@ graph LR
 
 ## Detailed Flow Diagrams
 
-### Flow 1: Zero Touch - Push to Auto-PR
+### Flow 1: Automated - Push to Auto-PR
 
 ```mermaid
 sequenceDiagram

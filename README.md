@@ -1,4 +1,4 @@
-# 🤖 Zero Touch PR Governance Agent
+# 🤖 PR Governance Agent
 
 [![Serverless](https://img.shields.io/badge/Serverless-AWS_Lambda-orange?style=flat-square&logo=amazon-aws)](https://aws.amazon.com/lambda/)
 [![AI](https://img.shields.io/badge/AI-Multi--Model-blue?style=flat-square&logo=google-gemini)](https://deepmind.google/technologies/gemini/)
@@ -7,7 +7,7 @@
 > **"Push Code, Walk Away."** — The future of secure development.
 
 ## 🚀 Overview
-The **Zero Touch PR Governance Agent** is an autonomous AI system that manages the entire lifecycle of code changes. It eliminates "Governance Fatigue" by automating the boring stuff (PR creation, basic checks) and strictly enforcing the critical stuff (Risk Analysis).
+The **PR Governance Agent** is an autonomous AI system that manages the entire lifecycle of code changes. It eliminates "Governance Fatigue" by automating the boring stuff (PR creation, basic checks) and strictly enforcing the critical stuff (Risk Analysis).
 
 **Core Logic:**
 1.  **Monitor**: Auto-detects code pushes.
@@ -15,7 +15,7 @@ The **Zero Touch PR Governance Agent** is an autonomous AI system that manages t
 3.  **Analyze**: AI (Llama 3, Gemini, or Bedrock) evaluates risk against internal policies.
 4.  **Enforce**: 
     -   ⛔ **High Risk**: Auto-Closes the PR (Requires Manager Approval).
-    -   ✅ **Low Risk**: Auto-Merges the PR (Zero Touch).
+    -   ✅ **Low Risk**: Auto-Merges the PR (Automated).
 
 ## 🛠️ Architecture
 -   **Brains**: 
@@ -62,15 +62,13 @@ The **Zero Touch PR Governance Agent** is an autonomous AI system that manages t
 
 ## 📖 Usage Guide
 
-### The "Zero Touch" Flow
+### The Automated Flow
 1.  **Create Branch**: `git checkout -b feature-login-fix`
 2.  **Push Code**: `git push origin feature-login-fix`
 3.  **Done**: The Agent takes over. Watch your PR tab!
 
 ### 🧪 Google Colab (Demo Mode)
-Want to see the AI brains in action without deploying to AWS? Use our [Interactive Colab Notebook](./Zero_Touch_PR_Agent_Colab.ipynb).
-
-1.  Open the notebook in [Google Colab](https://colab.research.google.com/github/lmudu2/PR-agent/blob/main/Zero_Touch_PR_Agent_Colab.ipynb).
+1.  Open the notebook in [Google Colab](https://colab.research.google.com/github/lmudu2/PR-agent/blob/main/PR_Agent_Colab.ipynb).
 2.  Provide your API keys when prompted.
 3.  Run the cells to simulate a PR analysis instantly.
 
