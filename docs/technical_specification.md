@@ -15,14 +15,15 @@ To achieve a "Zero Touch" developer experience while maintaining strict security
 - **Accelerate Happy Paths**: Automatically merge low-risk changes without human intervention.
 
 ## 3. Solution Architecture
-The system employs a Serverless Event-Driven Architecture leveraging AWS Lambda for orchestration and **Meta Llama 3 70B** for reasoning.
+The system employs a Serverless Event-Driven Architecture leveraging AWS Lambda for orchestration and **Multi-Model AI Support** for reasoning.
 
 | Layer | Component | Function |
 | :--- | :--- | :--- |
 | **Interface Layer** | GitHub Webhooks | Captures `push` (code updates), `pull_request` (creation/sync), and `issue_comment` (approvals) events. |
 | **Orchestration Layer** | AWS Lambda (Gateway) | Routes events: triggers Auto-PR for pushes, inputs for formatting, or Risk Analysis for PRs. |
+| **Routing Layer** | **Brain Variants** | Modular Lambdas for model flexibility: `Brain-Simple` (Llama 3), `Brain-Gemini` (Gemini 2.0), `Brain-Bedrock` (Claude 3). |
 | **Knowledge Layer** | Local Context Files | Stores policies and incident history directly within the inference execution environment context. |
-| **Monitor Layer** | **Meta Llama 3 70B** | Performs ultra-fast (<1s) multi-step reasoning to diff code, semantic analysis, and risk scoring. |
+| **Monitor Layer** | **AI Models** | Performs ultra-fast (<1s) multi-step reasoning to diff code, semantic analysis, and risk scoring. |
 | **Execution Layer** | AWS Lambda (Writer) | Performs side-effects: Creating PRs via API, posting comments, closing/reopening/merging PRs, and **updating Jira**. |
 
 ## 4. Personas & ROI Benefits
@@ -51,7 +52,10 @@ The agent follows a **Monitor-Analyze-Act** cycle:
         -   **Output**: "✅ Approved: Low risk change detected. Merging..."
 
 ## 6. Technical Implementation
--   **Foundational Model**: **Meta Llama 3 70B**.
+-   **Foundational Models**:
+    -   **Meta Llama 3 70B** (via Groq)
+    -   **Gemini 2.0 Flash** (via Google GenAI)
+    -   **Claude 3 Sonnet** (via AWS Bedrock)
 -   **Orchestrator**: AWS Lambda (Python 3.12+).
 -   **Data Source**: Flat-file Context (`.txt` files zipped with Lambda).
 -   **GitHub Integration**: `urllib` (Standard Library) authentication via GitHub PAT.
