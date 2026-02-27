@@ -212,7 +212,9 @@ def lambda_handler(event, context):
             if existing_ticket and existing_ticket != "UNKNOWN" and comment_text:
                 # ADD COMMENT TO EXISTING TICKET
                 print(f"DEBUG Jira: Adding comment to {existing_ticket}")
-                jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
+                jira_domain = os.environ.get('JIRA_DOMAIN')
+                if not jira_domain:
+                    raise Exception("Missing JIRA_DOMAIN environment variable.")
                 comment_url = f"https://{jira_domain}/rest/api/3/issue/{existing_ticket}/comment"
                 payload = {
                     "body": {
@@ -254,8 +256,12 @@ def lambda_handler(event, context):
         ⏰ Created: {timestamp}
         """
                     
-                    jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
-                    jira_project_key = os.environ.get('JIRA_PROJECT_KEY', 'SCRUM')
+                    jira_domain = os.environ.get('JIRA_DOMAIN')
+                    jira_project_key = os.environ.get('JIRA_PROJECT_KEY')
+                    
+                    if not all([jira_domain, jira_project_key]):
+                        missing = [k for k, v in {'JIRA_DOMAIN': jira_domain, 'JIRA_PROJECT_KEY': jira_project_key}.items() if not v]
+                        raise Exception(f"Missing required Jira environment variables: {', '.join(missing)}")
                     
                     # Hint for users who likely missed setting env vars
                     if jira_domain == 'lmudu95.atlassian.net' and 'lmudu' not in repo:
