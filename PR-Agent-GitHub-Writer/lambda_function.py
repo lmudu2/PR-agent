@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 
 def send_actual_email(recipient, subject, body):
     ses_client = boto3.client('ses', region_name='us-east-1') 
-    SENDER = "lmudu95@gmail.com" 
+    SENDER = os.environ.get('SES_SENDER_EMAIL', 'lmudu95@gmail.com')
     try:
         ses_client.send_email(
             Source=SENDER,
@@ -212,7 +212,8 @@ def lambda_handler(event, context):
             if existing_ticket and existing_ticket != "UNKNOWN" and comment_text:
                 # ADD COMMENT TO EXISTING TICKET
                 print(f"DEBUG Jira: Adding comment to {existing_ticket}")
-                comment_url = f"https://lmudu95.atlassian.net/rest/api/3/issue/{existing_ticket}/comment"
+                jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
+                comment_url = f"https://{jira_domain}/rest/api/3/issue/{existing_ticket}/comment"
                 payload = {
                     "body": {
                         "type": "doc", "version": 1,
@@ -252,10 +253,12 @@ def lambda_handler(event, context):
     ⏰ Created: {timestamp}
     """
                 
-                jira_url = "https://lmudu95.atlassian.net/rest/api/3/issue"
+                jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
+                jira_project_key = os.environ.get('JIRA_PROJECT_KEY', 'SCRUM')
+                jira_url = f"https://{jira_domain}/rest/api/3/issue"
                 payload = {
                     "fields": {
-                        "project": {"key": "SCRUM"},
+                        "project": {"key": jira_project_key},
                         "summary": f"[{risk_level}] Audit: {service_name} - PR #{pr_num}",
                         "description": {
                             "type": "doc", "version": 1, 
@@ -338,7 +341,8 @@ def lambda_handler(event, context):
             """
             
             subject = f"🔔 [{risk_level}] Approval Required - PR #{pr_num} ({service_name})"
-            if send_actual_email("lmudu95@gmail.com", subject, email_body):
+            recipient_email = os.environ.get('APPROVAL_EMAIL_RECIPIENT', 'lmudu95@gmail.com')
+            if send_actual_email(recipient_email, subject, email_body):
                 response_text = "SUCCESS: Email sent."
             else:
                 response_text = "ERROR: Email failed."
