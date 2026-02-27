@@ -1,0 +1,26 @@
+# Ignore Everything by default
+*
+
+# Whitelist Folders (Main Code)
+!GitHub-PR-Risk-Reviewer/
+!GitHub-PR-Risk-Reviewer/*.py
+!PR-Agent-Brain-Simple/
+!PR-Agent-Brain-Simple/*.py
+!PR-Agent-Brain-Simple/*.txt
+!PR-Agent-GitHub-Writer/
+!PR-Agent-GitHub-Writer/*.py
+
+# Whitelist Documentation
+!docs/
+!docs/*.md
+!README.md
+!SETUP_GUIDE.md
+!deploy.py
+!requirements.txt
+!*.ipynb
+
+# Explicitly Ignore Junk inside Whitelisted Folders
+*.zip
+*.json
+__pycache__/
+*.DS_Store
