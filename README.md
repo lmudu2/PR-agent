@@ -67,10 +67,11 @@ The **PR Governance Agent** is an autonomous AI system that manages the entire l
 2.  **Push Code**: `git push origin feature-login-fix`
 3.  **Done**: The Agent takes over. Watch your PR tab!
 
-### 🧪 Google Colab (Demo Mode)
-1.  Open the notebook in [Google Colab](https://colab.research.google.com/github/lmudu2/PR-agent/blob/main/PR_Agent_Colab.ipynb).
-2.  Provide your API keys when prompted.
-3.  Run the cells to simulate a PR analysis instantly.
+### 🧪 Google Colab (Live Demo)
+1.  **Zero-Touch Demo**: Open the [Live Demo Notebook](https://colab.research.google.com/github/lmudu2/PR-agent/blob/main/PR_Agent_Demo.ipynb). 
+    - *Best for seeing the full agent workflow (Branch -> PR -> AI Audit -> Jira -> Email).*
+2.  **Internal Testing**: Open the [Brain Lab Notebook](https://colab.research.google.com/github/lmudu2/PR-agent/blob/main/PR_Agent_Colab.ipynb).
+    - *Best for testing individual LLM brains (Gemini, Llama) locally.*
 
 ## 📄 Documentation
 -   [Technical Specification](./docs/technical_specification.md)
