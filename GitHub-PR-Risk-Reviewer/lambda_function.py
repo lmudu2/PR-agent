@@ -85,29 +85,6 @@ def create_pull_request(repo_full_name, branch_name):
 
 def lambda_handler(event, context):
     print(f"FULL EVENT: {json.dumps(event)}")
-    
-    # --- SECRET GATEKEEPER (Dual-Auth) ---
-    headers_all = event.get('headers', {})
-    # Case-insensitive header check
-    headers_low = {k.lower(): v for k, v in headers_all.items()}
-    provided_secret = headers_low.get('x-agent-secret')
-    github_event = headers_low.get('x-github-event')
-    expected_secret = os.environ.get('AGENT_SECRET', 'test-demo-secret-2024') # Fallback if not set
-    
-    # 1. Allow if valid Demo Secret is provided
-    if provided_secret == expected_secret:
-        print("AUTH: Valid Demo Secret provided.")
-    # 2. Allow if valid GitHub Webhook header is provided
-    elif github_event:
-        print(f"AUTH: Valid GitHub Event ({github_event}) detected.")
-    # 3. Reject everything else
-    else:
-        print("AUTH FAILURE: Missing secret and not a GitHub webhook.")
-        return {
-            'statusCode': 403,
-            'body': json.dumps({'error': 'Forbidden: Valid credential required'})
-        }
-
     try:
         body = json.loads(event.get('body', '{}'))
         if 'repository' not in body: return {'statusCode': 200}
