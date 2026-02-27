@@ -14,10 +14,7 @@
 !docs/
 !docs/*.md
 !README.md
-!SETUP_GUIDE.md
-!deploy.py
 !requirements.txt
-!*.ipynb
 
 # Explicitly Ignore Junk inside Whitelisted Folders
 *.zip

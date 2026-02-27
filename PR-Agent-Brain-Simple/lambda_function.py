@@ -301,7 +301,7 @@ def create_jira_ticket(repo: str, pr_num: str, risk_level: str, analysis: str) -
     pr_details = get_pr_details(repo, pr_num)
     existing_ticket = extract_jira_ticket(pr_details)
     
-    ticket_id = existing_ticket if existing_ticket else f"SCRUM-{int(datetime.now().timestamp()) % 1000}"
+    ticket_id = existing_ticket if existing_ticket else "PENDING"
     
     try:
         if existing_ticket:

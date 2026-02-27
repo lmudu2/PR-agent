@@ -233,46 +233,55 @@ def lambda_handler(event, context):
                     response_text = f"ERROR: Failed to comment on {existing_ticket}: {e}"
 
             else:
-                # CREATE NEW TICKET (Original Logic)
-                # Create rich description with all details
-                from datetime import datetime
-                import re
-                timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
-                
-                description_text = f"""Risk Analysis Report
-    
-    📋 Repository: {repo or 'Not specified'}
-    🔢 PR Number: #{pr_num}
-    ⚠️ Risk Level: {risk_level}
-    🔧 Affected Service: {service_name}
-    
-    📝 Request Details:
-    {approval_comment}
-    
-    🔍 Action Type: {action_type}
-    ⏰ Created: {timestamp}
-    """
-                
-                jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
-                jira_project_key = os.environ.get('JIRA_PROJECT_KEY', 'SCRUM')
-                jira_url = f"https://{jira_domain}/rest/api/3/issue"
-                payload = {
-                    "fields": {
-                        "project": {"key": jira_project_key},
-                        "summary": f"[{risk_level}] Audit: {service_name} - PR #{pr_num}",
-                        "description": {
-                            "type": "doc", "version": 1, 
-                            "content": [{"type": "paragraph", "content": [{"type": "text", "text": description_text}]}]
-                        },
-                        "issuetype": {"name": "Task"}
+                try:
+                    # CREATE NEW TICKET (Original Logic)
+                    # Create rich description with all details
+                    from datetime import datetime
+                    import re
+                    timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+                    
+                    description_text = f"""Risk Analysis Report
+        
+        📋 Repository: {repo or 'Not specified'}
+        🔢 PR Number: #{pr_num}
+        ⚠️ Risk Level: {risk_level}
+        🔧 Affected Service: {service_name}
+        
+        📝 Request Details:
+        {approval_comment}
+        
+        🔍 Action Type: {action_type}
+        ⏰ Created: {timestamp}
+        """
+                    
+                    jira_domain = os.environ.get('JIRA_DOMAIN', 'lmudu95.atlassian.net')
+                    jira_project_key = os.environ.get('JIRA_PROJECT_KEY', 'SCRUM')
+                    
+                    # Hint for users who likely missed setting env vars
+                    if jira_domain == 'lmudu95.atlassian.net' and 'lmudu' not in repo:
+                        print("WARN: JIRA_DOMAIN appears to be defaulting to 'lmudu95'. Ensure Lambda Env Vars are set.")
+
+                    jira_url = f"https://{jira_domain}/rest/api/3/issue"
+                    payload = {
+                        "fields": {
+                            "project": {"key": jira_project_key},
+                            "summary": f"[{risk_level}] Audit: {service_name} - PR #{pr_num}",
+                            "description": {
+                                "type": "doc", "version": 1, 
+                                "content": [{"type": "paragraph", "content": [{"type": "text", "text": description_text}]}]
+                            },
+                            "issuetype": {"name": "Task"}
+                        }
                     }
-                }
-                req = urllib.request.Request(jira_url, data=json.dumps(payload).encode(), method='POST')
-                req.add_header('Authorization', f'Basic {auth}')
-                req.add_header('Content-Type', 'application/json')
-                with urllib.request.urlopen(req) as res:
-                    key = json.loads(res.read())['key']
-                    response_text = f"SUCCESS: Jira {key} created."
+                    req = urllib.request.Request(jira_url, data=json.dumps(payload).encode(), method='POST')
+                    req.add_header('Authorization', f'Basic {auth}')
+                    req.add_header('Content-Type', 'application/json')
+                    with urllib.request.urlopen(req) as res:
+                        key = json.loads(res.read())['key']
+                        response_text = f"SUCCESS: Jira {key} created."
+                except Exception as e:
+                    print(f"Jira Create Error: {e}")
+                    response_text = f"ERROR: Jira creation failed. Check Lambda Env Vars (JIRA_DOMAIN, JIRA_TOKEN). Detail: {e}"
 
         # --- TOOL: APPROVAL EMAIL ---
         elif func_name == 'send_approval_email':
